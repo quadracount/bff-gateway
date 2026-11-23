@@ -1,0 +1,23 @@
+# Version pnpm. Para: frontend-app, bff-gateway, groups-service, mcp-server
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      # Igual que en el Dockerfile: pnpm exacto segun "packageManager"
+      - run: corepack enable && corepack install
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run --if-present lint
+      - run: pnpm run --if-present test --passWithNoTests
+      - run: pnpm build
