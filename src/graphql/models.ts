@@ -129,20 +129,23 @@ export class Group {
   @Field(() => [Member])
   members: Member[];
 
+  // Los siguientes campos los calculan field resolvers (GroupResolver) con
+  // groups-service, balances-service y activity-service. Son opcionales en
+  // TypeScript, pero no en el schema (no tienen nullable).
   @Field(() => Int)
-  myBalance: number;
+  myBalance?: number;
 
   @Field(() => [Expense])
-  expenses: Expense[];
+  expenses?: Expense[];
 
   @Field(() => [MemberBalance])
-  balances: MemberBalance[];
+  balances?: MemberBalance[];
 
   @Field(() => [Transfer])
-  settlementPlan: Transfer[];
+  settlementPlan?: Transfer[];
 
   @Field(() => [ActivityEntry])
-  activity: ActivityEntry[];
+  activity?: ActivityEntry[];
 }
 
 @ObjectType()

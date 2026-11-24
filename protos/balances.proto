@@ -40,11 +40,16 @@ message MemberBalanceRequest {
   string user_id = 2;
 }
 
+// from_name y to_name los envía el BFF (los saca del grupo ya verificado en
+// groups-service), porque balances-service no conoce los nombres y el evento
+// pago.registrado los necesita.
 message RegisterPaymentRequest {
   string group_id = 1;
   string from_user_id = 2;
   string to_user_id = 3;
   int64 amount = 4;
+  string from_name = 5;
+  string to_name = 6;
 }
 
 message Payment {
