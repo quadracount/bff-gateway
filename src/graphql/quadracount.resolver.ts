@@ -9,6 +9,7 @@ import {
   ResolveField,
   Resolver,
 } from '@nestjs/graphql';
+import { ActivityService } from '../activity/activity.service';
 import { CreateExpenseInput } from './inputs';
 import {
   ActivityEntry,
@@ -60,6 +61,8 @@ export class AuthResolver {
 
 @Resolver(() => Group)
 export class GroupResolver {
+  constructor(private readonly activityService: ActivityService) {}
+
   @Query(() => [Group])
   myGroups(): Group[] {
     return pendiente('myGroups', 'groups-service por gRPC');
@@ -122,13 +125,13 @@ export class GroupResolver {
   }
 
   @ResolveField(() => [ActivityEntry])
-  activity(
+  async activity(
     @Parent() group: Group,
     @Args('limit', { type: () => Int, nullable: true }) limit?: number,
-  ): ActivityEntry[] {
-    void group;
-    void limit;
-    return pendiente('Group.activity', 'activity-service por RabbitMQ');
+  ): Promise<ActivityEntry[]> {
+    // El grupo ya pasó por la verificación de miembro en groups-service
+    const entries = await this.activityService.getFeed(group.id, limit);
+    return entries.map((entry) => ({ ...entry, groupName: group.name }));
   }
 }
 
