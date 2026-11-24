@@ -1,2 +1,5 @@
 allowBuilds:
   '@parcel/watcher': true
+  # protobufjs se usa como librería, su script de instalación no hace falta
+  '@apollo/protobufjs': false
+  protobufjs: false
