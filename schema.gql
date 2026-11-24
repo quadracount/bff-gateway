@@ -1,0 +1,118 @@
+# ------------------------------------------------------
+# THIS FILE WAS AUTOMATICALLY GENERATED (DO NOT MODIFY)
+# ------------------------------------------------------
+
+type ActivityEntry {
+  actorName: String!
+  createdAt: String!
+  groupId: ID!
+  groupName: String
+  id: ID!
+  text: String!
+}
+
+type AuthPayload {
+  token: String!
+  user: User!
+}
+
+input CreateExpenseInput {
+  amount: Int!
+  description: String!
+  groupId: ID!
+  paidBy: ID!
+  shares: [ShareInput!]!
+  source: ExpenseSource!
+}
+
+type Expense {
+  amount: Int!
+  createdAt: String!
+  description: String!
+  id: ID!
+  paidBy: Member!
+  shares: [Share!]!
+  source: ExpenseSource!
+}
+
+type ExpenseDraft {
+  amount: Int!
+  description: String!
+  interpretations: [Interpretation!]!
+  paidBy: Member!
+  shares: [Share!]!
+  sumMatches: Boolean!
+}
+
+"""Si el gasto se creo a mano o con el asistente de texto libre"""
+enum ExpenseSource {
+  ASSISTANT
+  MANUAL
+}
+
+type Group {
+  activity(limit: Int): [ActivityEntry!]!
+  balances: [MemberBalance!]!
+  expenses: [Expense!]!
+  id: ID!
+  members: [Member!]!
+  myBalance: Int!
+  name: String!
+  settlementPlan: [Transfer!]!
+}
+
+type Interpretation {
+  meaning: String!
+  phrase: String!
+}
+
+type Member {
+  name: String!
+  userId: ID!
+}
+
+type MemberBalance {
+  member: Member!
+  net: Int!
+}
+
+type Mutation {
+  addMember(email: String!, groupId: ID!): Group!
+  createExpense(input: CreateExpenseInput!): Expense!
+  createGroup(name: String!): Group!
+  login(email: String!, password: String!): AuthPayload!
+  parseExpenseText(groupId: ID!, paidBy: ID!, text: String!): ExpenseDraft!
+  register(email: String!, name: String!, password: String!): AuthPayload!
+  registerPayment(amount: Int!, fromUserId: ID!, groupId: ID!, toUserId: ID!): Transfer!
+  removeMember(groupId: ID!, userId: ID!): Group!
+}
+
+type Query {
+  group(id: ID!): Group
+  me: User!
+  myActivity(limit: Int): [ActivityEntry!]!
+  myGroups: [Group!]!
+}
+
+type Share {
+  amount: Int!
+  name: String!
+  userId: ID!
+}
+
+input ShareInput {
+  amount: Int!
+  userId: ID!
+}
+
+type Transfer {
+  amount: Int!
+  from: Member!
+  to: Member!
+}
+
+type User {
+  email: String!
+  id: ID!
+  name: String!
+}

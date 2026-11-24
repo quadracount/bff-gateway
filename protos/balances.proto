@@ -1,0 +1,57 @@
+syntax = "proto3";
+package balances;
+
+service BalancesService {
+  rpc GetGroupBalances (GroupRequest) returns (GroupBalances);
+  rpc GetSettlementPlan (GroupRequest) returns (SettlementPlan);
+
+  rpc GetMemberBalance (MemberBalanceRequest) returns (MemberBalance);
+
+  rpc RegisterPayment (RegisterPaymentRequest) returns (Payment);
+}
+
+message GroupRequest {
+  string group_id = 1;
+}
+
+message MemberBalance {
+  string user_id = 1;
+  int64 net = 2;
+}
+
+message GroupBalances {
+  string group_id = 1;
+  repeated MemberBalance balances = 2;
+}
+
+message Transfer {
+  string from_user_id = 1;
+  string to_user_id = 2;
+  int64 amount = 3;
+}
+
+message SettlementPlan {
+  string group_id = 1;
+  repeated Transfer transfers = 2;
+}
+
+message MemberBalanceRequest {
+  string group_id = 1;
+  string user_id = 2;
+}
+
+message RegisterPaymentRequest {
+  string group_id = 1;
+  string from_user_id = 2;
+  string to_user_id = 3;
+  int64 amount = 4;
+}
+
+message Payment {
+  string id = 1;
+  string group_id = 2;
+  string from_user_id = 3;
+  string to_user_id = 4;
+  int64 amount = 5;
+  string created_at = 6;
+}

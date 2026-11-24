@@ -15,5 +15,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml* ./
 RUN corepack install
 RUN pnpm install --prod --frozen-lockfile
 COPY --from=build /app/dist ./dist
+# proto-loader lee los .proto en runtime
+COPY protos ./protos
 EXPOSE 3000
 CMD ["node", "dist/main.js"]
