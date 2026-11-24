@@ -5,7 +5,7 @@ API Gateway en NestJS. Es lo único que ve el frontend, por GraphQL en `/graphql
 ## Con quién habla
 
 - groups-service y balances-service por gRPC (copias de los `.proto` en `protos/`).
-- activity-service por RabbitMQ, con `activity.get_feed` y `activity.get_user_feed`.
+- activity-service por RabbitMQ, con `activity.get_feed` y `activity.get_user_feed` (`src/activity/`). Si no responde en 5 s, la consulta falla con un error 503 en vez de quedarse esperando.
 - mcp-server por REST, para `parseExpenseText`.
 
 ## Schema
@@ -57,3 +57,13 @@ pnpm start:dev
 ```
 
 Antes de hacer push: `pnpm run lint && pnpm test && pnpm build`. Los tests necesitan Node 24.
+
+## Probar la conexión con activity-service
+
+Con el `docker-compose.yml` de infra-k8s levantado, desde `infra-k8s`:
+
+```bash
+docker compose exec -T bff-gateway node - < ../bff-gateway/scripts/check-activity.cjs
+```
+
+Publica un evento dos veces y pide el feed por request-reply. Tiene que terminar con `OK`.
