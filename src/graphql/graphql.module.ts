@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { GraphQLModule } from '@nestjs/graphql';
 import { join } from 'node:path';
 import { ActivityModule } from '../activity/activity.module';
+import { GrpcClientsModule } from '../grpc/grpc-clients.module';
 import {
   ActivityResolver,
   AuthResolver,
@@ -14,6 +15,7 @@ import {
 @Module({
   imports: [
     ActivityModule,
+    GrpcClientsModule,
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: join(process.cwd(), 'schema.gql'),

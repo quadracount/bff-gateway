@@ -4,7 +4,7 @@ API Gateway en NestJS. Es lo único que ve el frontend, por GraphQL en `/graphql
 
 ## Con quién habla
 
-- groups-service y balances-service por gRPC (copias de los `.proto` en `protos/`).
+- groups-service y balances-service por gRPC (copias de los `.proto` en `protos/`, clientes en `src/grpc/`). Los errores gRPC se traducen a errores GraphQL legibles (`src/grpc/grpc-errors.ts`). Si un servicio se cae, el BFF lo vuelve a ver a los pocos segundos de que se levante (reintento máximo cada 5 s).
 - activity-service por RabbitMQ, con `activity.get_feed` y `activity.get_user_feed` (`src/activity/`). Si no responde en 5 s, la consulta falla con un error 503 en vez de quedarse esperando.
 - mcp-server por REST, para `parseExpenseText`.
 
@@ -16,9 +16,11 @@ El schema se define en código (`src/graphql/`) y el SDL generado queda en `sche
 pnpm schema
 ```
 
-Por ahora los resolvers lanzan `NotImplementedException`; se implementan desde la Fase 2.
+Implementado (Fase 2): `myGroups`, `group` con todos sus campos (`expenses`, `myBalance`, `balances`, `settlementPlan`, `activity`) y `createExpense`. El resto lanza `NotImplementedException` hasta las Fases 4 y 5.
 
 Todo pide `Authorization: Bearer <token>` menos `register` y `login`. El usuario sale del token y se manda a groups-service como `requester_id`.
+
+**Provisional hasta la Fase 4:** todavía no hay login, así que `@CurrentUser()` (`src/auth/current-user.decorator.ts`) devuelve el usuario de `DEV_USER_ID`. En la Fase 4 solo cambia ese decorador.
 
 ## REST interno
 
@@ -48,6 +50,7 @@ diff balances-service/protos/balances.proto bff-gateway/protos/balances.proto
 | `BALANCES_GRPC_URL` | `balances-service:50052` |
 | `RABBITMQ_URL` | `amqp://rabbitmq:5672` |
 | `MCP_SERVER_URL` | `http://mcp-server:3001` |
+| `DEV_USER_ID` | `u-martin` (provisional, hasta el login de la Fase 4) |
 
 ## Correr
 

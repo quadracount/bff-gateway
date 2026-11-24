@@ -10,7 +10,11 @@ import {
   Resolver,
 } from '@nestjs/graphql';
 import { ActivityService } from '../activity/activity.service';
+import { CurrentUser } from '../auth/current-user.decorator';
+import { BalancesClient } from '../grpc/balances.client';
+import { GroupsClient } from '../grpc/groups.client';
 import { CreateExpenseInput } from './inputs';
+import { memberOf, toExpense, toGroup } from './mappers';
 import {
   ActivityEntry,
   AuthPayload,
@@ -22,7 +26,7 @@ import {
   User,
 } from './models';
 
-// Fase 1: solo está el schema. Cada operación se implementa desde la Fase 2.
+// Operaciones que todavía no están implementadas (Fases 4 y 5).
 function pendiente(operacion: string, origen: string): never {
   throw new NotImplementedException(
     `${operacion} todavia no esta implementado (lo resolvera ${origen}).`,
@@ -61,17 +65,26 @@ export class AuthResolver {
 
 @Resolver(() => Group)
 export class GroupResolver {
-  constructor(private readonly activityService: ActivityService) {}
+  constructor(
+    private readonly groupsClient: GroupsClient,
+    private readonly balancesClient: BalancesClient,
+    private readonly activityService: ActivityService,
+  ) {}
 
   @Query(() => [Group])
-  myGroups(): Group[] {
-    return pendiente('myGroups', 'groups-service por gRPC');
+  async myGroups(@CurrentUser() userId: string): Promise<Group[]> {
+    const groups = await this.groupsClient.listGroupsForUser(userId);
+    return groups.map(toGroup);
   }
 
+  // groups-service verifica que el usuario sea miembro. Los field resolvers de
+  // abajo solo se ejecutan sobre un grupo que ya pasó esa verificación.
   @Query(() => Group, { nullable: true })
-  group(@Args('id', { type: () => ID }) id: string): Group | null {
-    void id;
-    return pendiente('group', 'groups-service por gRPC');
+  async group(
+    @Args('id', { type: () => ID }) id: string,
+    @CurrentUser() userId: string,
+  ): Promise<Group> {
+    return toGroup(await this.groupsClient.getGroup(id, userId));
   }
 
   @Mutation(() => Group)
@@ -101,27 +114,41 @@ export class GroupResolver {
   }
 
   @ResolveField(() => Int)
-  myBalance(@Parent() group: Group): number {
-    void group;
-    return pendiente('Group.myBalance', 'balances-service por gRPC');
+  async myBalance(
+    @Parent() group: Group,
+    @CurrentUser() userId: string,
+  ): Promise<number> {
+    const balances = await this.balancesClient.getGroupBalances(group.id);
+    return balances.get(userId) ?? 0;
   }
 
   @ResolveField(() => [Expense])
-  expenses(@Parent() group: Group): Expense[] {
-    void group;
-    return pendiente('Group.expenses', 'groups-service por gRPC');
+  async expenses(
+    @Parent() group: Group,
+    @CurrentUser() userId: string,
+  ): Promise<Expense[]> {
+    const expenses = await this.groupsClient.listExpenses(group.id, userId);
+    return expenses.map((e) => toExpense(e, group));
   }
 
+  /** Un saldo por miembro, en el orden del grupo (0 si no tiene movimientos). */
   @ResolveField(() => [MemberBalance])
-  balances(@Parent() group: Group): MemberBalance[] {
-    void group;
-    return pendiente('Group.balances', 'balances-service por gRPC');
+  async balances(@Parent() group: Group): Promise<MemberBalance[]> {
+    const balances = await this.balancesClient.getGroupBalances(group.id);
+    return group.members.map((member) => ({
+      member,
+      net: balances.get(member.userId) ?? 0,
+    }));
   }
 
   @ResolveField(() => [Transfer])
-  settlementPlan(@Parent() group: Group): Transfer[] {
-    void group;
-    return pendiente('Group.settlementPlan', 'balances-service por gRPC');
+  async settlementPlan(@Parent() group: Group): Promise<Transfer[]> {
+    const transfers = await this.balancesClient.getSettlementPlan(group.id);
+    return transfers.map((t) => ({
+      from: memberOf(group, t.from_user_id),
+      to: memberOf(group, t.to_user_id),
+      amount: t.amount,
+    }));
   }
 
   @ResolveField(() => [ActivityEntry])
@@ -137,10 +164,30 @@ export class GroupResolver {
 
 @Resolver(() => Expense)
 export class ExpenseResolver {
+  constructor(private readonly groupsClient: GroupsClient) {}
+
   @Mutation(() => Expense)
-  createExpense(@Args('input') input: CreateExpenseInput): Expense {
-    void input;
-    return pendiente('createExpense', 'groups-service por gRPC');
+  async createExpense(
+    @Args('input') input: CreateExpenseInput,
+    @CurrentUser() userId: string,
+  ): Promise<Expense> {
+    const expense = await this.groupsClient.createExpense({
+      group_id: input.groupId,
+      description: input.description,
+      amount: input.amount,
+      paid_by: input.paidBy,
+      shares: input.shares.map((s) => ({
+        user_id: s.userId,
+        amount: s.amount,
+      })),
+      source: input.source,
+      requester_id: userId,
+    });
+    // Los nombres de quien pagó y de cada parte salen de los miembros del grupo
+    const group = toGroup(
+      await this.groupsClient.getGroup(input.groupId, userId),
+    );
+    return toExpense(expense, group);
   }
 
   @Mutation(() => ExpenseDraft)
