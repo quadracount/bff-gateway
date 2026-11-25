@@ -16,7 +16,7 @@ El schema se define en código (`src/graphql/`) y el SDL generado queda en `sche
 pnpm schema
 ```
 
-Implementado todo menos `parseExpenseText` (Fase 5).
+`parseExpenseText` verifica que seas miembro del grupo y le pide el borrador al mcp-server (`src/internal/mcp-server.client.ts`, espera hasta `MCP_TIMEOUT_MS`, 60 s por defecto). Los nombres y si la suma cuadra se toman del grupo verificado, no del borrador.
 
 Todo pide `Authorization: Bearer <token>` menos `register` y `login`. El usuario sale del token y se manda a groups-service como `requester_id`.
 
@@ -31,12 +31,14 @@ Todo pide `Authorization: Bearer <token>` menos `register` y `login`. El usuario
 
 `src/graphql/format-error.ts` deja en cada error solo el mensaje y `extensions.code`: `UNAUTHENTICATED` (token inválido o expirado: el frontend vuelve al login), `FORBIDDEN`, `NOT_FOUND`, `CONFLICT` (por ejemplo, quitar a un miembro con saldo), `BAD_USER_INPUT` o `SERVICE_UNAVAILABLE`.
 
-## REST interno (Fase 5)
+## REST interno
 
-Para el mcp-server, con el header `X-Internal-Key`:
+Para el mcp-server (`src/internal/`). Piden dos headers: `X-Internal-Key` y `X-Requester-Id`, el usuario a cuyo nombre se consulta. Ese id va a groups-service como `requester_id`, así que la verificación de miembro es la misma que en GraphQL.
 
-- `GET /internal/groups/:groupId/members`
-- `GET /internal/groups/:groupId/balances`
+- `GET /internal/groups/:groupId/members` → `[{ userId, name }]`
+- `GET /internal/groups/:groupId/balances` → `[{ userId, name, net }]`
+
+El BFF también manda `X-Internal-Key` al llamar a `/automation/parse-expense`.
 
 ## Contratos
 
