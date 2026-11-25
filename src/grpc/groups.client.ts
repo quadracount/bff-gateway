@@ -58,6 +58,36 @@ interface GroupsServiceGrpc {
     group_id: string;
     requester_id: string;
   }): Observable<{ expenses: GrpcExpense[] }>;
+  registerUser(req: {
+    name: string;
+    email: string;
+    password: string;
+  }): Observable<GrpcUser>;
+  verifyCredentials(req: {
+    email: string;
+    password: string;
+  }): Observable<GrpcUser>;
+  getUser(req: { user_id: string }): Observable<GrpcUser>;
+  createGroup(req: {
+    name: string;
+    requester_id: string;
+  }): Observable<GrpcGroup>;
+  addMember(req: {
+    group_id: string;
+    email: string;
+    requester_id: string;
+  }): Observable<GrpcGroup>;
+  removeMember(req: {
+    group_id: string;
+    user_id: string;
+    requester_id: string;
+  }): Observable<GrpcGroup>;
+}
+
+export interface GrpcUser {
+  id: string;
+  name: string;
+  email: string;
 }
 
 /** Cliente gRPC de groups-service. Los errores salen ya traducidos para GraphQL. */
@@ -69,6 +99,54 @@ export class GroupsClient implements OnModuleInit {
 
   onModuleInit(): void {
     this.service = this.client.getService<GroupsServiceGrpc>('GroupsService');
+  }
+
+  registerUser(
+    name: string,
+    email: string,
+    password: string,
+  ): Promise<GrpcUser> {
+    return call(this.service.registerUser({ name, email, password }));
+  }
+
+  verifyCredentials(email: string, password: string): Promise<GrpcUser> {
+    return call(this.service.verifyCredentials({ email, password }));
+  }
+
+  getUser(userId: string): Promise<GrpcUser> {
+    return call(this.service.getUser({ user_id: userId }));
+  }
+
+  createGroup(name: string, requesterId: string): Promise<GrpcGroup> {
+    return call(this.service.createGroup({ name, requester_id: requesterId }));
+  }
+
+  addMember(
+    groupId: string,
+    email: string,
+    requesterId: string,
+  ): Promise<GrpcGroup> {
+    return call(
+      this.service.addMember({
+        group_id: groupId,
+        email,
+        requester_id: requesterId,
+      }),
+    );
+  }
+
+  removeMember(
+    groupId: string,
+    userId: string,
+    requesterId: string,
+  ): Promise<GrpcGroup> {
+    return call(
+      this.service.removeMember({
+        group_id: groupId,
+        user_id: userId,
+        requester_id: requesterId,
+      }),
+    );
   }
 
   getGroup(groupId: string, requesterId: string): Promise<GrpcGroup> {

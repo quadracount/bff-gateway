@@ -16,13 +16,22 @@ El schema se define en código (`src/graphql/`) y el SDL generado queda en `sche
 pnpm schema
 ```
 
-Implementado (Fase 2): `myGroups`, `group` con todos sus campos (`expenses`, `myBalance`, `balances`, `settlementPlan`, `activity`) y `createExpense`. El resto lanza `NotImplementedException` hasta las Fases 4 y 5.
+Implementado todo menos `parseExpenseText` (Fase 5).
 
 Todo pide `Authorization: Bearer <token>` menos `register` y `login`. El usuario sale del token y se manda a groups-service como `requester_id`.
 
-**Provisional hasta la Fase 4:** todavía no hay login, así que `@CurrentUser()` (`src/auth/current-user.decorator.ts`) devuelve el usuario de `DEV_USER_ID`. En la Fase 4 solo cambia ese decorador.
+## Autenticación
 
-## REST interno
+- `register` y `login` piden a groups-service que cree o verifique al usuario, y el BFF firma un JWT (`@nestjs/jwt`, `JWT_SECRET`, expira en 24 horas) con el `user_id` en `sub`.
+- Un guard global (`src/auth/jwt-auth.guard.ts`) exige `Authorization: Bearer <token>` en todo lo que no tenga `@Public()` (solo `register` y `login`).
+- `@CurrentUser()` saca el `user_id` del token. Nunca viene de un argumento.
+- `registerPayment` solo acepta pagos en los que participa quien inició sesión, entre miembros del grupo.
+
+## Errores
+
+`src/graphql/format-error.ts` deja en cada error solo el mensaje y `extensions.code`: `UNAUTHENTICATED` (token inválido o expirado: el frontend vuelve al login), `FORBIDDEN`, `NOT_FOUND`, `CONFLICT` (por ejemplo, quitar a un miembro con saldo), `BAD_USER_INPUT` o `SERVICE_UNAVAILABLE`.
+
+## REST interno (Fase 5)
 
 Para el mcp-server, con el header `X-Internal-Key`:
 
@@ -50,7 +59,7 @@ diff balances-service/protos/balances.proto bff-gateway/protos/balances.proto
 | `BALANCES_GRPC_URL` | `balances-service:50052` |
 | `RABBITMQ_URL` | `amqp://rabbitmq:5672` |
 | `MCP_SERVER_URL` | `http://mcp-server:3001` |
-| `DEV_USER_ID` | `u-martin` (provisional, hasta el login de la Fase 4) |
+| `CORS_ORIGINS` | `http://localhost:8080,http://localhost:5173` (de dónde puede llamar el navegador) |
 
 ## Correr
 

@@ -4,6 +4,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { join } from 'node:path';
 import { ActivityModule } from '../activity/activity.module';
 import { GrpcClientsModule } from '../grpc/grpc-clients.module';
+import { formatError } from './format-error';
 import {
   ActivityResolver,
   AuthResolver,
@@ -22,6 +23,10 @@ import {
       sortSchema: true,
       playground: false,
       graphiql: true,
+      // La petición HTTP queda en el contexto: el guard JWT lee de ahí el header Authorization
+      context: ({ req }: { req: unknown }) => ({ req }),
+      // Códigos de error legibles para el frontend (NOT_FOUND, CONFLICT, UNAUTHENTICATED...)
+      formatError,
     }),
   ],
   providers: [

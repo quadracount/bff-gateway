@@ -25,6 +25,25 @@ interface BalancesServiceGrpc {
   getSettlementPlan(req: {
     group_id: string;
   }): Observable<{ group_id: string; transfers: GrpcTransfer[] }>;
+  registerPayment(req: RegisterPaymentRequest): Observable<GrpcPayment>;
+}
+
+export interface RegisterPaymentRequest {
+  group_id: string;
+  from_user_id: string;
+  to_user_id: string;
+  amount: number;
+  from_name: string;
+  to_name: string;
+}
+
+export interface GrpcPayment {
+  id: string;
+  group_id: string;
+  from_user_id: string;
+  to_user_id: string;
+  amount: number;
+  created_at: string;
 }
 
 /**
@@ -55,6 +74,10 @@ export class BalancesClient implements OnModuleInit {
       this.service.getSettlementPlan({ group_id: groupId }),
     );
     return res.transfers;
+  }
+
+  registerPayment(req: RegisterPaymentRequest): Promise<GrpcPayment> {
+    return call(this.service.registerPayment(req));
   }
 }
 

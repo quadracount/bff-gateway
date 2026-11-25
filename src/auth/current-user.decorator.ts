@@ -1,12 +1,18 @@
-import { createParamDecorator } from '@nestjs/common';
+import {
+  createParamDecorator,
+  type ExecutionContext,
+  UnauthorizedException,
+} from '@nestjs/common';
+import { requestFrom, SESSION_EXPIRED } from './jwt-auth.guard';
 
 /**
- * user_id de quien hace la petición. Se envía a groups-service como requester_id.
- *
- * PROVISIONAL (Fase 2): mientras no existe el login, es un usuario fijo tomado
- * de DEV_USER_ID. En la Fase 4 se cambia solo este decorador para leer el
- * user_id del JWT que valida el guard global; los resolvers no cambian.
+ * user_id de quien hace la petición, sacado del JWT que validó JwtAuthGuard.
+ * Se envía a groups-service como requester_id. Nunca viene de un argumento.
  */
 export const CurrentUser = createParamDecorator(
-  (): string => process.env.DEV_USER_ID ?? 'u-martin',
+  (_data: unknown, context: ExecutionContext): string => {
+    const user = requestFrom(context).user;
+    if (!user) throw new UnauthorizedException(SESSION_EXPIRED);
+    return user.id;
+  },
 );
