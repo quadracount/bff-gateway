@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  ForbiddenException,
-  NotImplementedException,
-} from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import {
   Args,
   ID,
@@ -19,6 +15,7 @@ import { CurrentUser } from '../auth/current-user.decorator';
 import { Public } from '../auth/public.decorator';
 import { BalancesClient } from '../grpc/balances.client';
 import { GroupsClient, type GrpcUser } from '../grpc/groups.client';
+import { McpServerClient } from '../internal/mcp-server.client';
 import { CreateExpenseInput } from './inputs';
 import { memberOf, toExpense, toGroup } from './mappers';
 import {
@@ -176,7 +173,10 @@ export class GroupResolver {
 
 @Resolver(() => Expense)
 export class ExpenseResolver {
-  constructor(private readonly groupsClient: GroupsClient) {}
+  constructor(
+    private readonly groupsClient: GroupsClient,
+    private readonly mcpServer: McpServerClient,
+  ) {}
 
   @Mutation(() => Expense)
   async createExpense(
@@ -202,18 +202,50 @@ export class ExpenseResolver {
     return toExpense(expense, group);
   }
 
+  /**
+   * El mcp-server interpreta el texto y devuelve un borrador; no se guarda nada.
+   * Primero se verifica que seas miembro, y los nombres y la suma se toman del
+   * grupo verificado, no del borrador.
+   */
   @Mutation(() => ExpenseDraft)
-  parseExpenseText(
+  async parseExpenseText(
     @Args('groupId', { type: () => ID }) groupId: string,
     @Args('text') text: string,
     @Args('paidBy', { type: () => ID }) paidBy: string,
-  ): ExpenseDraft {
-    void groupId;
-    void text;
-    void paidBy;
-    throw new NotImplementedException(
-      'parseExpenseText llega en la Fase 5 (mcp-server)',
-    );
+    @CurrentUser() userId: string,
+  ): Promise<ExpenseDraft> {
+    const trimmed = text.trim();
+    if (!trimmed) throw new BadRequestException('Escribe el gasto');
+    if (trimmed.length > 1000) {
+      throw new BadRequestException(
+        'El texto es muy largo (máximo 1000 caracteres)',
+      );
+    }
+
+    const group = toGroup(await this.groupsClient.getGroup(groupId, userId));
+    if (!group.members.some((m) => m.userId === paidBy)) {
+      throw new BadRequestException('Quien pagó no es miembro del grupo');
+    }
+
+    const draft = await this.mcpServer.parseExpense({
+      groupId,
+      text: trimmed,
+      paidBy,
+      requesterId: userId,
+    });
+    return {
+      description: draft.description,
+      amount: draft.amount,
+      paidBy: memberOf(group, draft.paidBy.userId),
+      shares: draft.shares.map((s) => ({
+        userId: s.userId,
+        name: memberOf(group, s.userId).name,
+        amount: s.amount,
+      })),
+      interpretations: draft.interpretations,
+      sumMatches:
+        draft.shares.reduce((sum, s) => sum + s.amount, 0) === draft.amount,
+    };
   }
 }
 

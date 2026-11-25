@@ -4,6 +4,7 @@ import { GraphQLModule } from '@nestjs/graphql';
 import { join } from 'node:path';
 import { ActivityModule } from '../activity/activity.module';
 import { GrpcClientsModule } from '../grpc/grpc-clients.module';
+import { McpServerClient } from '../internal/mcp-server.client';
 import { formatError } from './format-error';
 import {
   ActivityResolver,
@@ -30,6 +31,7 @@ import {
     }),
   ],
   providers: [
+    McpServerClient,
     AuthResolver,
     GroupResolver,
     ExpenseResolver,
